@@ -7,11 +7,9 @@ contract Auction =
                     highestBidder : address,
                     fundsByBidder : map(address, int) }
 
-      // bidder : address, bid : int
-      // withrawalAccount: address, amount: int
-  // datatype event = LogBid(address, int)
-  //   | LogWithdrawal(address, int)
-  //   | LogCanceled()
+  datatype event = LogBid(indexed address, indexed int)
+    | LogWithdrawal(indexed address, indexed int)
+    | LogCanceled(string)
 
   public stateful function init(_startBlock: int, _endBlock: int) : state =
     require(_startBlock =< _endBlock, "Start block should be smaller than the ending block.")
@@ -45,7 +43,7 @@ contract Auction =
     
     // update the user bid
     put(state{ fundsByBidder[Call.caller] = newBid, highestBidder = Call.caller })
-    //Chain.event(LogBid(Call.caller, newBid))
+    Chain.event(LogBid(Call.caller, newBid))
 
   public stateful function withdraw() =
     onlyEndedOrCanceled()
@@ -56,8 +54,6 @@ contract Auction =
     else
       require(Call.caller != state.highestBidder, "gosho")
       // the auction finished without being canceled
-      //if (Call.caller == state.owner)
-        // the auction's owner should be allowed to withdraw the highestBid
       let withdrawalAmount = state.fundsByBidder[state.highestBidder]
       withdraw'(Call.caller, withdrawalAmount)
 
@@ -66,15 +62,14 @@ contract Auction =
     onlyBeforeEnd()
     onlyNotCanceled()
     put(state { canceled = true })
-    //Chain.event(LogCanceled())
+    Chain.event(LogCanceled("Auction cancelled"))
 
   // Helper functions
-  private function calculateWithdrawAmount()
-
   private stateful function withdraw'(beneficiary : address, amount : int) =
     require (amount > 0, "Cannot withdraw 0")
-    put(state{ fundsByBidder[beneficiary] = state.fundsByBidder[beneficiary] - withdrawalAmount })
+    put(state{ fundsByBidder[beneficiary] = state.fundsByBidder[beneficiary] - amount })
     Chain.spend(beneficiary, amount)
+    Chain.event(LogWithdrawal(beneficiary, amount))
 
   private function require(b : bool, err : string) =
     if(!b)
