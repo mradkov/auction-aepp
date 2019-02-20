@@ -56,7 +56,7 @@ contract Auction {
     }
     
     modifier onlyEndedOrCanceled {
-        require((block.number > endBlock) || (canceled == true), "Ended or cancelled.");
+        require((block.number > endBlock) || (canceled == true), "The auction is not ended or cancelled.");
         _;
     }
     

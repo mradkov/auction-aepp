@@ -11,6 +11,11 @@ contract Auction =
     | LogWithdrawal(indexed address, indexed int)
     | LogCanceled(string)
 
+  /*
+  * @dev - Function for withdrawing the funds
+  * @param _startBlock : int - the number of the auction starting block
+  * @param _endBlock : int - the number of the auction ending block
+  */
   public stateful function init(_startBlock: int, _endBlock: int) : state =
     require(_startBlock =< _endBlock, "Start block should be smaller than the ending block.")
     require(_startBlock > Chain.block_height, "The starting block should be greater than the current chain block.")
@@ -21,6 +26,9 @@ contract Auction =
       highestBidder = #0,
       fundsByBidder = {} }
 
+  /*
+  * @dev - Function to place bid in the auction
+  */
   public stateful function placeBid() =
     onlyAfterStart()
     onlyBeforeEnd()
@@ -45,6 +53,9 @@ contract Auction =
     put(state{ fundsByBidder[Call.caller] = newBid, highestBidder = Call.caller })
     Chain.event(LogBid(Call.caller, newBid))
 
+  /*
+  * @dev - Function for withdrawing the funds
+  */
   public stateful function withdraw() =
     onlyEndedOrCanceled()
     let withdrawalAmount : int = 
@@ -67,6 +78,9 @@ contract Auction =
     // we process the payment
     withdraw'(Call.caller, withdrawalAmount)
 
+  /*
+  * @dev - Function for changing the auction state to cancelled
+  */
   public stateful function cancelAuction() =
     onlyOwner()
     onlyBeforeEnd()
@@ -74,34 +88,65 @@ contract Auction =
     put(state { canceled = true })
     Chain.event(LogCanceled("Auction cancelled."))
 
+  /*
+  * @dev - Internal helper function for withdrawing the funds
+  * @param beneficiary : address - the address to whom to send the funds
+  * @param amount : int - the amount to send
+  */
   private stateful function withdraw'(beneficiary : address, amount : int) =
     require (amount > 0, "Cannot withdraw 0.")
     put(state{ fundsByBidder[beneficiary] = state.fundsByBidder[beneficiary] - amount })
     Chain.spend(beneficiary, amount)
     Chain.event(LogWithdrawal(beneficiary, amount))
 
+  /*
+  * @dev - Internal helper function for reverting execution if condtion not met
+  * @param b : bool - the condition
+  * @param err : string - the error message to be provided
+  */
   private function require(b : bool, err : string) =
     if(!b)
       abort(err)
 
+  /*
+  * @dev - Internal helper function used as modifier for checking if the auction is still active
+  */
   private function onlyRunning() =
     onlyNotCanceled()
     require((Chain.block_height > state.startBlock) && (Chain.block_height < state.endBlock), "Blocks heights are not correct!")    
 
+  /*
+  * @dev - Internal helper function used as modifier for checking if the caller is the owner
+  */
   private function onlyOwner() =
     require(Call.caller == state.owner, "Only the owner is allowed!")
 
+  /*
+  * @dev - Internal helper function used as modifier for checking if the caller is NOT the owner
+  */
   private function onlyNotOwner() =
     require(Call.caller != state.owner, "Owner is not allowed!")
 
+  /*
+  * @dev - Internal helper function used as modifier for checking if the call is made after the auction start
+  */
   private function onlyAfterStart() =
     require(Chain.block_height > state.startBlock, "The auction is not started!")
 
+  /*
+  * @dev - Internal helper function used as modifier for checking if the call is made before the auction end
+  */
   private function onlyBeforeEnd() =
     require(Chain.block_height < state.endBlock, "Already ended.")
 
+  /*
+  * @dev - Internal helper function used as modifier for checking if the call is made while the auction is not cancelled
+  */
   private function onlyNotCanceled() =
     require(state.canceled == false, "Auction is cancelled.")
 
+  /*
+  * @dev - Internal helper function used as modifier for checking if the call is made after the auction is ended or cancelled
+  */
   private function onlyEndedOrCanceled() =
-    require((Chain.block_height > state.endBlock) || (state.canceled == true), "Ended or cancelled.")
+    require((Chain.block_height > state.endBlock) || (state.canceled == true), "The auction is not ended or cancelled.")
