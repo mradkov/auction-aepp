@@ -84,24 +84,24 @@ contract Auction =
     if(!b)
       abort(err)
 
-  private internal function onlyRunning() =
+  private function onlyRunning() =
     onlyNotCanceled()
     require((Chain.block_height > state.startBlock) && (Chain.block_height < state.endBlock), "Blocks heights are not correct!")    
 
-  private internal function onlyOwner() =
+  private function onlyOwner() =
     require(Call.caller == state.owner, "Only the owner is allowed!")
 
-  private internal function onlyNotOwner() =
+  private function onlyNotOwner() =
     require(Call.caller != state.owner, "Owner is not allowed!")
 
-  private internal function onlyAfterStart() =
+  private function onlyAfterStart() =
     require(Chain.block_height > state.startBlock, "The auction is not started!")
 
-  private internal function onlyBeforeEnd() =
+  private function onlyBeforeEnd() =
     require(Chain.block_height < state.endBlock, "Already ended.")
 
-  private internal function onlyNotCanceled() =
+  private function onlyNotCanceled() =
     require(state.canceled == false, "Auction is cancelled.")
 
-  private internal function onlyEndedOrCanceled() =
+  private function onlyEndedOrCanceled() =
     require((Chain.block_height > state.endBlock) || (state.canceled == true), "Ended or cancelled.")
