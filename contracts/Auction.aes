@@ -55,7 +55,7 @@ contract Auction =
       require(Call.caller != state.highestBidder, "gosho")
       // the auction finished without being canceled
       let withdrawalAmount = state.fundsByBidder[state.highestBidder]
-      withdraw'(Call.caller, withdrawalAmount)
+      withdraw'(state.highestBidder, withdrawalAmount)
 
   public stateful function cancelAuction() =
     onlyOwner()
