@@ -52,7 +52,7 @@ contract Auction =
       let withdrawalAmount = state.fundsByBidder[Call.caller]
       withdraw'(Call.caller, withdrawalAmount)
     else
-      require(Call.caller != state.highestBidder, "gosho")
+      require(Call.caller != state.highestBidder, "The caller should not be the highest bidder.")
       // the auction finished without being canceled
       let withdrawalAmount = state.fundsByBidder[state.highestBidder]
       withdraw'(state.highestBidder, withdrawalAmount)
