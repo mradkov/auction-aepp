@@ -1,0 +1,115 @@
+contract Auction =
+
+  record state = {  owner         : address,
+                    startBlock    : int,
+                    endBlock      : int,
+                    canceled      : bool,
+                    highestBidder : address,
+                    fundsByBidder : map(address, int) }
+
+      // bidder : address, bid : int
+      // withrawalAccount: address, amount: int
+  datatype event = LogBid(address, int)
+    | LogWithdrawal(address, int)
+    | LogCanceled()
+
+  public stateful function init(_startBlock: int, _endBlock: int) : state =
+    require(_startBlock =< _endBlock, "Start block should be smaller than the ending block.")
+    require(_startBlock > Chain.block_height, "The starting block should be greater than the current chain block.")
+    { owner         = Call.caller,
+      startBlock    = beneficiary,
+      endBlock      = deadline,
+      canceled      = false,
+      highestBidder = #0,
+      fundsByBidder = {} }
+
+  public stateful function placeBid() =
+    onlyAfterStart()
+    onlyBeforeEnd()
+    onlyNotCanceled()
+    onlyNotOwner()
+    
+    // reject transactions without value
+    require(Call.value > 0, "Please provide more than 0 AE")
+
+    // calculate the user's total bid based on the current amount they've sent to the contract
+    // plus whatever has been sent with this transaction
+    let newBid = state.fundsByBidder[Call.caller] + Call.value
+    
+    // get the current highest bid
+    let lastHighestBid = state.fundsByBidder[state.highestBidder]
+        
+    // if the user isn't even willing to overbid the highest bid, there's nothing for us
+    // to do except revert the transaction.
+    require (newBid > lastHighestBid, "Amount is not enough for overbid")
+    
+    // update the user bid
+    put(state{ fundsByBidder[Call.caller] = newBid, highestBidder = Call.caller })
+    Chain.event(LogBid(Call.caller, newBid))
+
+  public stateful function withdraw() =
+    onlyEndedOrCanceled()
+    // let withdrawalAccount : address = #0
+    // let withdrawalAmount : int = 0
+
+    if (state.canceled == true)
+      // if the auction was canceled, everyone should simply be allowed to withdraw their funds
+      let withdrawalAmount = state.fundsByBidder[Call.caller]
+    else
+      // highest bidder won the auction, so he cannot withdraw his money
+      require(Call.caller != state.highestBidder)
+      
+      // the auction finished without being canceled
+      if (Call.caller == state.owner)
+        // the auction's owner should be allowed to withdraw the highestBid
+        let withdrawalAmount = state.fundsByBidder[state.highestBidder]
+      else
+        // anyone who participated but did not win the auction 
+        // should be allowed to withdraw
+        // the full amount of their funds
+        let withdrawalAmount = state.fundsByBidder[Call.caller]
+    
+    require (withdrawalAmount > 0, "Cannot withdraw 0")
+    
+    put(state{ fundsByBidder[withdrawalAccount] = state.fundsByBidder[withdrawalAccount] - withdrawalAmount })
+
+    // send the funds
+    Chain.spend(withdrawalAccount, withdrawalAmount)
+    Chain.event(LogWithdrawal(Call.caller, withdrawalAmount))
+
+  public stateful function cancelAuction() =
+    onlyOwner()
+    onlyBeforeEnd()
+    onlyNotCanceled()
+    put(state { canceled = true })
+    Chain.event(LogCanceled())
+
+  // Helper functions
+  private function require(b : bool, err : string) =
+    if(!b)
+      abort(err)
+
+  private function onlyRunning() =
+    onlyNotCanceled()
+    require(((Chain.block_height > state.startBlock) && (Chain.block_height < state.endBlock)), "Blocks heights are not correct!")    
+
+  private function onlyOwner() =
+    require(Call.caller == state.owner, "Only the owner is allowed!")
+
+  private function onlyNotOwner() =
+    require(Call.caller != state.owner, "Owner is not allowed!")
+
+  private function onlyAfterStart() =
+    require(Chain.block_height > state.startBlock, "The auction is not started!")
+
+  private function onlyBeforeEnd() =
+    require(Chain.block_height < state.endBlock, "Already ended")
+
+  private function onlyNotCanceled() =
+    require(state.canceled == false, "Auction is cancelled")
+
+  private function onlyEndedOrCanceled() =
+    require(((Chain.block_height > state.endBlock) || (state.canceled == true)), "Ended or cancelled")
+
+  
+  // End
