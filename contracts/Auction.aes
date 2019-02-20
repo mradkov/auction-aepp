@@ -53,7 +53,7 @@ contract Auction =
 
     if (state.canceled == true)
       // if the auction was canceled, everyone should simply be allowed to withdraw their funds
-      let withdrawalAmount = state.fundsByBidder[Call.caller]
+      withdrawalAmount = state.fundsByBidder[Call.caller]
     else
       // highest bidder won the auction, so he cannot withdraw his money
       require(Call.caller != state.highestBidder)
@@ -61,12 +61,12 @@ contract Auction =
       // the auction finished without being canceled
       if (Call.caller == state.owner)
         // the auction's owner should be allowed to withdraw the highestBid
-        let withdrawalAmount = state.fundsByBidder[state.highestBidder]
+        withdrawalAmount = state.fundsByBidder[state.highestBidder]
       else
         // anyone who participated but did not win the auction 
         // should be allowed to withdraw
         // the full amount of their funds
-        let withdrawalAmount = state.fundsByBidder[Call.caller]
+        withdrawalAmount = state.fundsByBidder[Call.caller]
     
     require (withdrawalAmount > 0, "Cannot withdraw 0")
     
