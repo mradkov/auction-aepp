@@ -28,7 +28,7 @@ contract Auction =
     onlyNotOwner()
     
     // reject transactions without value
-    require(Call.value > 0, "Please provide more than 0 AE")
+    require(Call.value > 0, "Please provide more than 0 AEs.")
 
     // calculate the user's total bid based on the current amount they've sent to the contract
     // plus whatever has been sent with this transaction
@@ -39,7 +39,7 @@ contract Auction =
         
     // if the user isn't even willing to overbid the highest bid, there's nothing for us
     // to do except revert the transaction.
-    require (newBid > lastHighestBid, "Amount is not enough for overbid")
+    require (newBid > lastHighestBid, "The provided amount is not enough for overbid.")
     
     // update the user bid
     put(state{ fundsByBidder[Call.caller] = newBid, highestBidder = Call.caller })
@@ -72,11 +72,10 @@ contract Auction =
     onlyBeforeEnd()
     onlyNotCanceled()
     put(state { canceled = true })
-    Chain.event(LogCanceled("Auction cancelled"))
+    Chain.event(LogCanceled("Auction cancelled."))
 
-  // Helper functions
   private stateful function withdraw'(beneficiary : address, amount : int) =
-    require (amount > 0, "Cannot withdraw 0")
+    require (amount > 0, "Cannot withdraw 0.")
     put(state{ fundsByBidder[beneficiary] = state.fundsByBidder[beneficiary] - amount })
     Chain.spend(beneficiary, amount)
     Chain.event(LogWithdrawal(beneficiary, amount))
@@ -99,13 +98,10 @@ contract Auction =
     require(Chain.block_height > state.startBlock, "The auction is not started!")
 
   private internal function onlyBeforeEnd() =
-    require(Chain.block_height < state.endBlock, "Already ended")
+    require(Chain.block_height < state.endBlock, "Already ended.")
 
   private internal function onlyNotCanceled() =
-    require(state.canceled == false, "Auction is cancelled")
+    require(state.canceled == false, "Auction is cancelled.")
 
   private internal function onlyEndedOrCanceled() =
-    require((Chain.block_height > state.endBlock) || (state.canceled == true), "Ended or cancelled")
-
-  
-  // End
+    require((Chain.block_height > state.endBlock) || (state.canceled == true), "Ended or cancelled.")
