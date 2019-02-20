@@ -49,32 +49,17 @@ contract Auction =
 
   public stateful function withdraw() =
     onlyEndedOrCanceled()
-    let withdrawalAmount : int = 0
-
     if (state.canceled == true)
       // if the auction was canceled, everyone should simply be allowed to withdraw their funds
-      withdrawalAmount = state.fundsByBidder[Call.caller]
+      let withdrawalAmount = state.fundsByBidder[Call.caller]
+      withdraw'(Call.caller, withdrawalAmount)
     else
-      // highest bidder won the auction, so he cannot withdraw his money
-      require(Call.caller != state.highestBidder)
-      
+      require(Call.caller != state.highestBidder, "gosho")
       // the auction finished without being canceled
-      if (Call.caller == state.owner)
+      //if (Call.caller == state.owner)
         // the auction's owner should be allowed to withdraw the highestBid
-        withdrawalAmount = state.fundsByBidder[state.highestBidder]
-      else
-        // anyone who participated but did not win the auction 
-        // should be allowed to withdraw
-        // the full amount of their funds
-        withdrawalAmount = state.fundsByBidder[Call.caller]
-    
-    require (withdrawalAmount > 0, "Cannot withdraw 0")
-    
-    put(state{ fundsByBidder[Call.caller] = state.fundsByBidder[Call.caller] - withdrawalAmount })
-
-    // send the funds
-    Chain.spend(Call.caller, withdrawalAmount)
-    //Chain.event(LogWithdrawal(Call.caller, withdrawalAmount))
+      let withdrawalAmount = state.fundsByBidder[state.highestBidder]
+      withdraw'(Call.caller, withdrawalAmount)
 
   public stateful function cancelAuction() =
     onlyOwner()
@@ -84,6 +69,13 @@ contract Auction =
     //Chain.event(LogCanceled())
 
   // Helper functions
+  private function calculateWithdrawAmount()
+
+  private stateful function withdraw'(beneficiary : address, amount : int) =
+    require (amount > 0, "Cannot withdraw 0")
+    put(state{ fundsByBidder[beneficiary] = state.fundsByBidder[beneficiary] - withdrawalAmount })
+    Chain.spend(beneficiary, amount)
+
   private function require(b : bool, err : string) =
     if(!b)
       abort(err)
