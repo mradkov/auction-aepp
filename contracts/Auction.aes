@@ -9,16 +9,16 @@ contract Auction =
 
       // bidder : address, bid : int
       // withrawalAccount: address, amount: int
-  datatype event = LogBid(address, int)
-    | LogWithdrawal(address, int)
-    | LogCanceled()
+  // datatype event = LogBid(address, int)
+  //   | LogWithdrawal(address, int)
+  //   | LogCanceled()
 
   public stateful function init(_startBlock: int, _endBlock: int) : state =
     require(_startBlock =< _endBlock, "Start block should be smaller than the ending block.")
     require(_startBlock > Chain.block_height, "The starting block should be greater than the current chain block.")
     { owner         = Call.caller,
-      startBlock    = beneficiary,
-      endBlock      = deadline,
+      startBlock    = _startBlock,
+      endBlock      = _endBlock,
       canceled      = false,
       highestBidder = #0,
       fundsByBidder = {} }
@@ -45,7 +45,7 @@ contract Auction =
     
     // update the user bid
     put(state{ fundsByBidder[Call.caller] = newBid, highestBidder = Call.caller })
-    Chain.event(LogBid(Call.caller, newBid))
+    //Chain.event(LogBid(Call.caller, newBid))
 
   public stateful function withdraw() =
     onlyEndedOrCanceled()
@@ -75,41 +75,41 @@ contract Auction =
 
     // send the funds
     Chain.spend(withdrawalAccount, withdrawalAmount)
-    Chain.event(LogWithdrawal(Call.caller, withdrawalAmount))
+    //Chain.event(LogWithdrawal(Call.caller, withdrawalAmount))
 
   public stateful function cancelAuction() =
     onlyOwner()
     onlyBeforeEnd()
     onlyNotCanceled()
     put(state { canceled = true })
-    Chain.event(LogCanceled())
+    //Chain.event(LogCanceled())
 
   // Helper functions
   private function require(b : bool, err : string) =
     if(!b)
       abort(err)
 
-  private function onlyRunning() =
+  private internal function onlyRunning() =
     onlyNotCanceled()
-    require(((Chain.block_height > state.startBlock) && (Chain.block_height < state.endBlock)), "Blocks heights are not correct!")    
+    require((Chain.block_height > state.startBlock) && (Chain.block_height < state.endBlock), "Blocks heights are not correct!")    
 
-  private function onlyOwner() =
+  private internal function onlyOwner() =
     require(Call.caller == state.owner, "Only the owner is allowed!")
 
-  private function onlyNotOwner() =
+  private internal function onlyNotOwner() =
     require(Call.caller != state.owner, "Owner is not allowed!")
 
-  private function onlyAfterStart() =
+  private internal function onlyAfterStart() =
     require(Chain.block_height > state.startBlock, "The auction is not started!")
 
-  private function onlyBeforeEnd() =
+  private internal function onlyBeforeEnd() =
     require(Chain.block_height < state.endBlock, "Already ended")
 
-  private function onlyNotCanceled() =
+  private internal function onlyNotCanceled() =
     require(state.canceled == false, "Auction is cancelled")
 
-  private function onlyEndedOrCanceled() =
-    require(((Chain.block_height > state.endBlock) || (state.canceled == true)), "Ended or cancelled")
+  private internal function onlyEndedOrCanceled() =
+    require((Chain.block_height > state.endBlock) || (state.canceled == true), "Ended or cancelled")
 
   
   // End
