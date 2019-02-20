@@ -47,15 +47,25 @@ contract Auction =
 
   public stateful function withdraw() =
     onlyEndedOrCanceled()
-    if (state.canceled == true)
-      // if the auction was canceled, everyone should simply be allowed to withdraw their funds
-      let withdrawalAmount = state.fundsByBidder[Call.caller]
-      withdraw'(Call.caller, withdrawalAmount)
-    else
-      require(Call.caller != state.highestBidder, "The caller should not be the highest bidder.")
-      // the auction finished without being canceled
-      let withdrawalAmount = state.fundsByBidder[state.highestBidder]
-      withdraw'(state.highestBidder, withdrawalAmount)
+    let withdrawalAmount : int = 
+      switch(state.canceled)
+        true =>
+            // the auction is cancelled and everyone can withdraw the bidding value they put in
+            state.fundsByBidder[Call.caller]
+        false =>
+            // the auction is not cancelled and its finished normally
+            // the highest bidder cannot withdraw his bids
+            require(Call.caller != state.highestBidder, "The caller should not be the highest bidder.")
+            // we check if the caller is the auction owner
+            if (Call.caller == state.owner)
+              // if its the onwer we give him the value of the winning/highest bid
+              state.fundsByBidder[state.highestBidder]
+            else
+              // if its somebody else /other participant/ - he can withdraw his bids
+              state.fundsByBidder[Call.caller]
+    
+    // we process the payment
+    withdraw'(Call.caller, withdrawalAmount)
 
   public stateful function cancelAuction() =
     onlyOwner()
