@@ -12,7 +12,7 @@ contract Auction =
     | LogCanceled(string)
 
   /*
-  * @dev - Function for withdrawing the funds
+  * @dev - Initializing function / constructor
   * @param _startBlock : int - the number of the auction starting block
   * @param _endBlock : int - the number of the auction ending block
   */
