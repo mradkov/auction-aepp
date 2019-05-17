@@ -1,11 +1,11 @@
 contract Auction =
 
   record state = {  owner         : address,
-                    startBlock    : int,
-                    endBlock      : int,
+                    start_block    : int,
+                    end_block      : int,
                     canceled      : bool,
-                    highestBidder : address,
-                    fundsByBidder : map(address, int) }
+                    highest_bidder : address,
+                    funds_by_bidder : map(address, int) }
 
   datatype event = LogBid(indexed address, indexed int)
     | LogWithdrawal(indexed address, indexed int)
@@ -13,78 +13,78 @@ contract Auction =
 
   /*
   * @dev - Initializing function / constructor
-  * @param _startBlock : int - the number of the auction starting block
-  * @param _endBlock : int - the number of the auction ending block
+  * @param _start_block : int - the number of the auction starting block
+  * @param _end_block : int - the number of the auction ending block
   */
-  public stateful function init(_startBlock: int, _endBlock: int) : state =
-    require(_startBlock =< _endBlock, "Start block should be smaller than the ending block.")
-    require(_startBlock > Chain.block_height, "The starting block should be greater than the current chain block.")
+  public stateful function init(_start_block: int, _end_block: int) : state =
+    require(_start_block =< _end_block, "Start block should be smaller than the ending block.")
+    require(_start_block > Chain.block_height, "The starting block should be greater than the current chain block.")
     { owner         = Call.caller,
-      startBlock    = _startBlock,
-      endBlock      = _endBlock,
+      start_block    = _start_block,
+      end_block      = _end_block,
       canceled      = false,
-      highestBidder = #0,
-      fundsByBidder = {} }
+      highest_bidder = #0,
+      funds_by_bidder = {} }
 
   /*
   * @dev - Function to place bid in the auction
   */
-  public stateful function placeBid() =
-    onlyAfterStart()
-    onlyBeforeEnd()
-    onlyNotCanceled()
-    onlyNotOwner()
+  public stateful function place_bid() =
+    only_after_start()
+    only_before_end()
+    only_not_canceled()
+    only_not_owner()
     
     // reject transactions without value
     require(Call.value > 0, "Please provide more than 0 AEs.")
 
     // calculate the user's total bid based on the current amount they've sent to the contract
     // plus whatever has been sent with this transaction
-    let newBid = state.fundsByBidder[Call.caller] + Call.value
+    let new_bid = state.funds_by_bidder[Call.caller] + Call.value
     
     // get the current highest bid
-    let lastHighestBid = state.fundsByBidder[state.highestBidder]
+    let last_highest_bid = state.funds_by_bidder[state.highest_bidder]
         
     // if the user isn't even willing to overbid the highest bid, there's nothing for us
     // to do except revert the transaction.
-    require (newBid > lastHighestBid, "The provided amount is not enough for overbid.")
+    require (new_bid > last_highest_bid, "The provided amount is not enough for overbid.")
     
     // update the user bid
-    put(state{ fundsByBidder[Call.caller] = newBid, highestBidder = Call.caller })
-    Chain.event(LogBid(Call.caller, newBid))
+    put(state{ funds_by_bidder[Call.caller] = newBid, highest_bidder = Call.caller })
+    Chain.event(LogBid(Call.caller, new_bid))
 
   /*
   * @dev - Function for withdrawing the funds
   */
   public stateful function withdraw() =
-    onlyEndedOrCanceled()
-    let withdrawalAmount : int = 
+    only_ended_or_canceled()
+    let withdrawal_amount : int = 
       switch(state.canceled)
         true =>
             // the auction is cancelled and everyone can withdraw the bidding value they put in
-            state.fundsByBidder[Call.caller]
+            state.funds_by_bidder[Call.caller]
         false =>
             // the auction is not cancelled and its finished normally
             // the highest bidder cannot withdraw his bids
-            require(Call.caller != state.highestBidder, "The caller should not be the highest bidder.")
+            require(Call.caller != state.highest_bidder, "The caller should not be the highest bidder.")
             // we check if the caller is the auction owner
             if (Call.caller == state.owner)
               // if its the onwer we give him the value of the winning/highest bid
-              state.fundsByBidder[state.highestBidder]
+              state.funds_by_bidder[state.highest_bidder]
             else
               // if its somebody else /other participant/ - he can withdraw his bids
-              state.fundsByBidder[Call.caller]
+              state.funds_by_bidder[Call.caller]
     
     // we process the payment
-    withdraw'(Call.caller, withdrawalAmount)
+    withdraw'(Call.caller, withdrawal_amount)
 
   /*
   * @dev - Function for changing the auction state to cancelled
   */
-  public stateful function cancelAuction() =
-    onlyOwner()
-    onlyBeforeEnd()
-    onlyNotCanceled()
+  public stateful function cancel_auction() =
+    only_owner()
+    only_before_end()
+    only_not_canceled()
     put(state { canceled = true })
     Chain.event(LogCanceled("Auction cancelled."))
 
@@ -95,7 +95,7 @@ contract Auction =
   */
   private stateful function withdraw'(beneficiary : address, amount : int) =
     require (amount > 0, "Cannot withdraw 0.")
-    put(state{ fundsByBidder[beneficiary] = state.fundsByBidder[beneficiary] - amount })
+    put(state{ funds_by_bidder[beneficiary] = state.funds_by_bidder[beneficiary] - amount })
     Chain.spend(beneficiary, amount)
     Chain.event(LogWithdrawal(beneficiary, amount))
 
@@ -111,42 +111,42 @@ contract Auction =
   /*
   * @dev - Internal helper function used as modifier for checking if the auction is still active
   */
-  private function onlyRunning() =
-    onlyNotCanceled()
-    require((Chain.block_height > state.startBlock) && (Chain.block_height < state.endBlock), "Blocks heights are not correct!")    
+  private function only_running() =
+    only_not_canceled()
+    require((Chain.block_height > state.start_block) && (Chain.block_height < state.end_block), "Blocks heights are not correct!")    
 
   /*
   * @dev - Internal helper function used as modifier for checking if the caller is the owner
   */
-  private function onlyOwner() =
+  private function only_owner() =
     require(Call.caller == state.owner, "Only the owner is allowed!")
 
   /*
   * @dev - Internal helper function used as modifier for checking if the caller is NOT the owner
   */
-  private function onlyNotOwner() =
+  private function only_no_owner() =
     require(Call.caller != state.owner, "Owner is not allowed!")
 
   /*
   * @dev - Internal helper function used as modifier for checking if the call is made after the auction start
   */
-  private function onlyAfterStart() =
-    require(Chain.block_height > state.startBlock, "The auction is not started!")
+  private function only_after_start() =
+    require(Chain.block_height > state.start_block, "The auction is not started!")
 
   /*
   * @dev - Internal helper function used as modifier for checking if the call is made before the auction end
   */
-  private function onlyBeforeEnd() =
-    require(Chain.block_height < state.endBlock, "Already ended.")
+  private function only_before_end() =
+    require(Chain.block_height < state.end_block, "Already ended.")
 
   /*
   * @dev - Internal helper function used as modifier for checking if the call is made while the auction is not cancelled
   */
-  private function onlyNotCanceled() =
+  private function only_not_canceled() =
     require(state.canceled == false, "Auction is cancelled.")
 
   /*
   * @dev - Internal helper function used as modifier for checking if the call is made after the auction is ended or cancelled
   */
-  private function onlyEndedOrCanceled() =
-    require((Chain.block_height > state.endBlock) || (state.canceled == true), "The auction is not ended or cancelled.")
+  private function only_ended_or_canceled() =
+    require((Chain.block_height > state.end_block) || (state.canceled == true), "The auction is not ended or cancelled.")
