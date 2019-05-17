@@ -124,7 +124,7 @@ contract Auction =
   /*
   * @dev - Internal helper function used as modifier for checking if the caller is NOT the owner
   */
-  private function only_no_owner() =
+  private function only_not_owner() =
     require(Call.caller != state.owner, "Owner is not allowed!")
 
   /*
