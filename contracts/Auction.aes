@@ -50,7 +50,7 @@ contract Auction =
     require (new_bid > last_highest_bid, "The provided amount is not enough for overbid.")
     
     // update the user bid
-    put(state{ funds_by_bidder[Call.caller] = newBid, highest_bidder = Call.caller })
+    put(state{ funds_by_bidder[Call.caller] = new_bid, highest_bidder = Call.caller })
     Chain.event(LogBid(Call.caller, new_bid))
 
   /*
