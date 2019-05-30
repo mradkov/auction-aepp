@@ -1,10 +1,10 @@
 contract Auction =
 
-  record state = {  owner         : address,
-                    start_block    : int,
-                    end_block      : int,
-                    canceled      : bool,
-                    highest_bidder : address,
+  record state = {  owner           : address,
+                    start_block     : int,
+                    end_block       : int,
+                    canceled        : bool,
+                    highest_bidder  : address,
                     funds_by_bidder : map(address, int) }
 
   datatype event = LogBid(indexed address, indexed int)
