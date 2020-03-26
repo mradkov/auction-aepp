@@ -1,15 +1,15 @@
 {
-  "name": "forgae-sample",
+  "name": "auction-aepp",
+  "author": "Milen Radkov <milenradkov@me.com>",
   "version": "1.0.0",
   "description": "This is the default package.json generated for your project",
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },
-  "author": "",
   "license": "ISC",
   "dependencies": {
     "@aeternity/aepp-sdk": "3.0.0",
-    "forgae": "git+https://github.com/aeternity/aepp-forgae-js.git"
+    "aeproject-lib": "^2.2.0"
   }
 }
